@@ -1,5 +1,7 @@
 const http = require('http');
+const fs = require('fs')
 const url = require('url');
+const path = require('path');
 
 const times = ["1:00", "1:30", "2:00", "2:30", "3:00", "3:30", "4:00", "4:30"];
 const days = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
@@ -28,8 +30,11 @@ let serverObj =  http.createServer(function(req,res){
 		case "/check":
 			check(urlObj.query,res);
 			break;
+		case "/":
+			sendFile("/index.html",res);
+			break;
 		default:
-			error(res,404,"pathname unknown");
+			sendFile(urlObj.pathname,res);
 
 	}
 });
@@ -43,7 +48,7 @@ function schedule(qObj,res) {
 		let date = availableTimes[qObj.day].indexOf(qObj.time);
 		addElement(availableTimes[qObj.day],date,1);
 		appointments.splice(0,0,{name: String(qObj.name), day: qObj.day, time: qObj.time});
-		write(res,200,"Scheduled")
+		write(res,200,"Scheduled",contentType(qObj.pathname))
 	}
 	else
 	{
@@ -81,7 +86,7 @@ function cancel(qObj,res) {
 						break;
 					}
 				}
-				write(res,200,"Appointment has been canceled");
+				write(res,200,"Appointment has been canceled",contentType(qObj.pathname));
 				appointmentExists = true;
 				break;
 			}
@@ -103,13 +108,45 @@ function verifyScheduling(qObj,res) {
 		return false;
 	}
 }
+
+function contentType(route) {
+	switch(path.extname(route)) {
+		case(".html"):
+			return "text/html";
+			break;
+		case(".json"):
+			return "application/json";
+			break;
+		case(".txt"):
+			return "text/plain";
+			break;
+		case(".css"):
+			return "text/css";
+			break;
+		case(".js"):
+			return "text/javascript";
+			break;
+		case("/"):
+			return "text/html";
+	}
+}
+
+function sendFile(path,res) {
+	fs.readFile("./public_html"+path,function(err,content) {
+		if (err) {
+			error(res,404,'error: not working');
+		}
+		else {
+			write(res,200,content,contentType(path));
+		}
+		});
+}
+
 function verifyChecking(qObj,res) {
 	if (
 	  qObj.day == undefined ||
-          qObj.time == undefined ||
-          days.some(day => day != qObj.day) ||
-          times.some(time => time != qObj.time)
-         ) {
+          qObj.time == undefined)
+        {
                  return false;
 	}
 }
@@ -120,18 +157,19 @@ function deleteElement(array,index,amount) {
 	array.splice(index,amount);
 }
 function check(qObj,res) {
-	if (!verifyChecking(qObj,res)) {
+	if (verifyChecking(qObj,res)) {
 		error(res,300,"Missing data or incorrect input");
 	}
 	else if (availableTimes[qObj.day].some(time => time == qObj.time)) {
-		write(res,200,"This date is available");
+		write(res,200,"This date is available",contentType(qObj.pathname));
 	}
 	else {
 		error(res,300,"This date is not available");
 	}
 }
-function write(response,status,message) {
-	response.writeHead(status,{'content-type':'text/plain'});
+function write(response,status,message,contentType) {
+	console.log(contentType);
+	response.writeHead(status,{'content-type':contentType});
         response.write(message);
         response.end();
 }
