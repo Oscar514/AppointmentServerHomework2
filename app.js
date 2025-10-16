@@ -22,13 +22,13 @@ let serverObj =  http.createServer(function(req,res){
 	let urlObj = url.parse(req.url,true);
 	switch (urlObj.pathname) {
 		case "/schedule":
-			schedule(urlObj.query,res);
+			schedule(urlObj.query,res,urlObj.pathname);
 			break;
 		case "/cancel":
-			cancel(urlObj.query,res);
+			cancel(urlObj.query,res,urlObj.pathname);
 			break;
 		case "/check":
-			check(urlObj.query,res);
+			check(urlObj.query,res,urlObj.pathname);
 			break;
 		case "/":
 			sendFile("/index.html",res);
@@ -39,26 +39,26 @@ let serverObj =  http.createServer(function(req,res){
 	}
 });
 
-function schedule(qObj,res) {
+function schedule(qObj,res,path) {
 	if (!verifyScheduling(qObj,res)) {
-		error(res,300,"Missing data or incorrect input");
+		error(res,400,"Missing data or incorrect input");
 	}
 	else if (availableTimes[qObj.day].some(time => time == qObj.time))
 	{
 		let date = availableTimes[qObj.day].indexOf(qObj.time);
 		addElement(availableTimes[qObj.day],date,1);
 		appointments.splice(0,0,{name: String(qObj.name), day: qObj.day, time: qObj.time});
-		write(res,200,"Scheduled",contentType(qObj.pathname))
+		write(res,200,"Scheduled",contentType(path))
 	}
 	else
 	{
 		error(res,400,"Can't schedule");
 	}
 }
-function cancel(qObj,res) {
+function cancel(qObj,res,path) {
 	appointmentExists = false;
 	if (!verifyScheduling(qObj,res)) {
-		error(res,300,"Missing data or incorrect input");
+		error(res,200,"Missing data or incorrect input");
         }
 	else {
 		for (let i = 0; i < appointments.length; i++)
@@ -86,7 +86,7 @@ function cancel(qObj,res) {
 						break;
 					}
 				}
-				write(res,200,"Appointment has been canceled",contentType(qObj.pathname));
+				write(res,200,"Appointment has been canceled",contentType(path));
 				appointmentExists = true;
 				break;
 			}
@@ -97,16 +97,13 @@ function cancel(qObj,res) {
 		}
 	}
 }
-function verifyScheduling(qObj,res) {
-	if (
+function verifyScheduling(qObj) {
+	return (
 	  qObj.name == undefined ||
 	  qObj.day == undefined ||
 	  qObj.time == undefined ||
 	  days.some(day => day != qObj.day) ||
-	  times.some(time => time != qObj.time)
-	) {
-		return false;
-	}
+	  times.some(time => time != qObj.time))
 }
 
 function contentType(route) {
@@ -126,8 +123,9 @@ function contentType(route) {
 		case(".js"):
 			return "text/javascript";
 			break;
-		case("/"):
+		default:
 			return "text/html";
+			break;
 	}
 }
 
@@ -142,13 +140,10 @@ function sendFile(path,res) {
 		});
 }
 
-function verifyChecking(qObj,res) {
-	if (
+function verifyChecking(qObj) {
+	return (
 	  qObj.day == undefined ||
           qObj.time == undefined)
-        {
-                 return false;
-	}
 }
 function addElement(array,index,amount,element) {
 	array.splice(index,amount,element);
@@ -156,15 +151,15 @@ function addElement(array,index,amount,element) {
 function deleteElement(array,index,amount) {
 	array.splice(index,amount);
 }
-function check(qObj,res) {
+function check(qObj,res,path) {
 	if (verifyChecking(qObj,res)) {
-		error(res,300,"Missing data or incorrect input");
+		error(res,400,"Missing data or incorrect input");
 	}
 	else if (availableTimes[qObj.day].some(time => time == qObj.time)) {
-		write(res,200,"This date is available",contentType(qObj.pathname));
+		write(res,200,"This date is available",contentType(path));
 	}
 	else {
-		error(res,300,"This date is not available");
+		error(res,400,"This date is not available");
 	}
 }
 function write(response,status,message,contentType) {

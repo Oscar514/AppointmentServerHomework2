@@ -1,0 +1,9 @@
+Q1: .. is to return to the previous directory and -R is repository.
+
+I did not collaborate with anyone while working on this assignment.
+
+References:
+
+https://www.w3schools.com/js/js_ajax_intro.asp
+https://www.w3schools.com/jsref/event_onclick.asp
+Lecture slides on AJAX, reading and serving files, 
